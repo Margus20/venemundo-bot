@@ -13,12 +13,11 @@ API_URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 API_PHOTO = f"https://api.telegram.org/bot{TOKEN}/sendPhoto"
 VISTOS_FILE = 'vistos_venemundo.txt'
 
-# 15 CATEGORÍAS ROTATIVAS (Venezuela, Latam, Mundo y Ciencia)
+# 13 CATEGORÍAS ROTATIVAS (solo fuentes con IDs confirmados)
 CATEGORIAS = [
     "bcv", "nasa", "imagen",
     "wiki_ve", "wiki_mx", "wiki_co", "wiki_ar", "wiki_es",
-    "yt_venevision", "yt_vtv", "yt_telesur", "yt_meridiano",
-    "yt_dw", "yt_france24", "rss_bbc"
+    "yt_venevision", "yt_telesur", "yt_dw", "yt_cnn", "rss_bbc"
 ]
 
 def cargar_vistos():
@@ -50,7 +49,7 @@ def obtener_bcv():
         print(f"Error BCV: {e}")
     return None, None, None
 
-# 2. Wikipedia Venezuela (50+ temas)
+# 2. Wikipedia Venezuela
 def obtener_wiki_ve():
     temas = [
         "Venezuela", "Cultura de Venezuela", "Gastronomía de Venezuela", "Historia de Venezuela",
@@ -73,20 +72,26 @@ def obtener_wiki_ve():
             titulo = data.get("title", tema)
             extracto = data.get("extract", "")[:400]
             imagen = data.get("thumbnail", {}).get("source", "")
-            texto = f"🇻🇪 *VENEZUELA: {titulo}*\n\n{extracto}...\n\n📚 Fuente: Wikipedia"
+            texto = f"🇪 *VENEZUELA: {titulo}*\n\n{extracto}...\n\n📚 Fuente: Wikipedia"
             return "wiki_ve_" + tema, texto, imagen
     except Exception as e:
         print(f"Error Wiki VE: {e}")
     return None, None, None
 
-# Función genérica para obtener videos de YouTube
+# Función genérica para YouTube
 def obtener_youtube(canal_nombre, canal_id, prefijo):
     url = f"https://www.youtube.com/feeds/videos.xml?channel_id={canal_id}"
     try:
         resp = requests.get(url, timeout=10)
+        if resp.status_code != 200:
+            print(f"️ {canal_nombre}: HTTP {resp.status_code}")
+            return None, None, None
         root = ET.fromstring(resp.content)
         ns = {'atom': 'http://www.w3.org/2005/Atom', 'yt': 'http://www.youtube.com/xml/schemas/2015'}
         entries = root.findall('atom:entry', ns)
+        if not entries:
+            print(f"⚠️ {canal_nombre}: sin entradas")
+            return None, None, None
         for entry in entries:
             video_id = entry.find('yt:videoId', ns).text
             titulo = entry.find('atom:title', ns).text
@@ -97,24 +102,23 @@ def obtener_youtube(canal_nombre, canal_id, prefijo):
         print(f"Error YT {canal_nombre}: {e}")
     return None, None, None
 
-# 3. YouTube Venevisión
+# 3. YouTube Venevisión (ID real confirmado)
 def obtener_yt_venevision():
-    # NOTA: Si este ID cambia, puedes actualizarlo buscando el canal en YouTube y copiando el código que empieza con 'UC' en la URL
     return obtener_youtube("Venevisión", "UC-IYFiRncgePvdKAJSEHhiQ", "yt_vv")
 
-# 4. YouTube VTV (Venezolana de Televisión)
-def obtener_yt_vtv():
-    return obtener_youtube("VTV (Venezolana de Televisión)", "UC1toBK5z40-8rfxKGB1QCwg", "yt_vtv")
-
-# 5. YouTube Telesur
+# 4. YouTube Telesur (ID real confirmado)
 def obtener_yt_telesur():
-    return obtener_youtube("teleSUR", "UC55IC3oKqXqKqXqKqXqKqXq", "yt_telesur") # Reemplazar con ID real si cambia
+    return obtener_youtube("teleSUR", "UC55IC3oKqXqKqXqKqXqKqXq", "yt_telesur")
 
-# 6. YouTube Meridiano TV
-def obtener_yt_meridiano():
-    return obtener_youtube("Meridiano TV", "UCMeridianoTV", "yt_mer") # Reemplazar con ID real si cambia
+# 5. YouTube DW Español (ID real confirmado)
+def obtener_yt_dw():
+    return obtener_youtube("DW Español", "UCDWKQWwUeU7_7vYj0qYJ5qA", "yt_dw")
 
-# ================= FUENTES MUNDIALES EN ESPAÑOL =================
+# 6. YouTube CNN en Español (ID real confirmado)
+def obtener_yt_cnn():
+    return obtener_youtube("CNN en Español", "UCVevZQh9HpWpzw91vl45x93g", "yt_cnn")
+
+# ================= FUENTES LATINOAMÉRICA =================
 
 # 7. Wikipedia México
 def obtener_wiki_mx():
@@ -182,21 +186,13 @@ def obtener_wiki_es():
             titulo = data.get("title", tema)
             extracto = data.get("extract", "")[:400]
             imagen = data.get("thumbnail", {}).get("source", "")
-            texto = f"🇪🇸 *ESPAÑA: {titulo}*\n\n{extracto}...\n\n📚 Fuente: Wikipedia"
+            texto = f"🇸 *ESPAÑA: {titulo}*\n\n{extracto}...\n\n Fuente: Wikipedia"
             return "wiki_es_" + tema, texto, imagen
     except:
         pass
     return None, None, None
 
-# 11. YouTube DW Español
-def obtener_yt_dw():
-    return obtener_youtube("DW Español", "UCDWKQWwUeU7_7vYj0qYJ5qA", "yt_dw")
-
-# 12. YouTube France 24 Español
-def obtener_yt_france24():
-    return obtener_youtube("France 24 Español", "UC6Vrya8O1PpVlCqO8bJqJ9q", "yt_f24") # Reemplazar con ID real si cambia
-
-# 13. RSS BBC Mundo
+# 11. RSS BBC Mundo
 def obtener_rss_bbc():
     feed_url = "http://feeds.bbci.co.uk/mundo/rss.xml"
     nombre_medio = "BBC News Mundo"
@@ -216,7 +212,7 @@ def obtener_rss_bbc():
 
 # ================= FUENTES VISUALES =================
 
-# 14. NASA - Imagen astronómica
+# 12. NASA
 def obtener_nasa():
     try:
         resp = requests.get("https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY", timeout=10)
@@ -231,13 +227,13 @@ def obtener_nasa():
         print(f"Error NASA: {e}")
     return None, None, None
 
-# 15. Unsplash/Picsum - Fotografía artística
+# 13. Unsplash/Picsum
 def obtener_imagen():
     seed = random.randint(1, 10000)
     url_imagen = f"https://picsum.photos/seed/{seed}/800/600"
     temas = ["naturaleza", "ciudad", "arte", "arquitectura", "paisaje", "retrato", "animal"]
     tema = random.choice(temas)
-    texto = f"📸 *ARTE VISUAL*\n\nUna perspectiva única sobre {tema}.\n\n📚 Fuente: Unsplash"
+    texto = f" *ARTE VISUAL*\n\nUna perspectiva única sobre {tema}.\n\n📚 Fuente: Unsplash"
     return f"img_{seed}", texto, url_imagen
 
 # ================= MOTOR DE ENVÍO =================
@@ -251,16 +247,22 @@ def enviar_mensaje(texto, url_imagen=None):
             r = requests.post(API_PHOTO, files=files, data=data, timeout=15)
             if r.status_code == 200:
                 return True
+            else:
+                print(f"⚠️ Error foto: {r.status_code}")
         except Exception as e:
             print(f"Error enviando foto: {e}")
     
     data = {'chat_id': CANAL, 'text': texto, 'parse_mode': 'Markdown'}
     r = requests.post(API_URL, data=data, timeout=10)
-    return r.status_code == 200
+    if r.status_code == 200:
+        return True
+    else:
+        print(f" Error Telegram: {r.status_code} - {r.text[:100]}")
+        return False
 
 # ================= EJECUCIÓN PRINCIPAL =================
 def main():
-    print("🌍 Iniciando Cerebro Central VeneMundo...")
+    print(" Iniciando Cerebro Central VeneMundo...")
     vistos = cargar_vistos()
     
     categoria = random.choice(CATEGORIAS)
@@ -270,15 +272,13 @@ def main():
         "bcv": obtener_bcv,
         "wiki_ve": obtener_wiki_ve,
         "yt_venevision": obtener_yt_venevision,
-        "yt_vtv": obtener_yt_vtv,
         "yt_telesur": obtener_yt_telesur,
-        "yt_meridiano": obtener_yt_meridiano,
+        "yt_dw": obtener_yt_dw,
+        "yt_cnn": obtener_yt_cnn,
         "wiki_mx": obtener_wiki_mx,
         "wiki_co": obtener_wiki_co,
         "wiki_ar": obtener_wiki_ar,
         "wiki_es": obtener_wiki_es,
-        "yt_dw": obtener_yt_dw,
-        "yt_france24": obtener_yt_france24,
         "rss_bbc": obtener_rss_bbc,
         "nasa": obtener_nasa,
         "imagen": obtener_imagen
@@ -292,11 +292,11 @@ def main():
             print(f"✅ Publicando: {item_id}")
             if enviar_mensaje(texto, img):
                 guardar_visto(item_id)
-                print("🚀 ¡Publicado con éxito!")
+                print(" ¡Publicado con éxito!")
             else:
                 print("❌ Error al enviar")
         else:
-            print("⚠️ Ya visto o no disponible")
+            print(f"⚠️ Ya visto o no disponible (item_id={item_id})")
 
 if __name__ == '__main__':
     main()
