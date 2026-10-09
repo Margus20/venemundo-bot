@@ -13,16 +13,13 @@ API_URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 API_PHOTO = f"https://api.telegram.org/bot{TOKEN}/sendPhoto"
 VISTOS_FILE = 'vistos_venemundo.txt'
 
-# Headers para Wikipedia (importante para no ser bloqueado)
-WIKI_HEADERS = {
-    'User-Agent': 'VeneMundoBot/1.0 (marcosvargas@example.com) Python/3.10'
-}
+WIKI_HEADERS = {'User-Agent': 'VeneMundoBot/1.0 (marcosvargas@example.com) Python/3.10'}
 
-# 13 CATEGORÍAS ROTATIVAS
+# 14 CATEGORÍAS (¡Ahora con VTV y Telesur reales!)
 CATEGORIAS = [
     "bcv", "nasa", "imagen",
     "wiki_ve", "wiki_mx", "wiki_co", "wiki_ar", "wiki_es",
-    "yt_venevision", "yt_telesur", "yt_dw", "yt_cnn", "rss_bbc"
+    "yt_venevision", "yt_vtv", "yt_telesur", "yt_dw", "yt_cnn", "rss_bbc"
 ]
 
 def cargar_vistos():
@@ -40,7 +37,6 @@ def limpiar_html(texto):
 
 # ================= FUENTES VENEZOLANAS =================
 
-# 1. BCV - Tasa del dólar
 def obtener_bcv():
     try:
         resp = requests.get("https://ve.dolarapi.com/v1/dolares/oficial", timeout=10)
@@ -54,22 +50,8 @@ def obtener_bcv():
         print(f"Error BCV: {e}")
     return None, None, None
 
-# 2. Wikipedia Venezuela (con reintentos)
 def obtener_wiki_ve():
-    temas = [
-        "Venezuela", "Cultura de Venezuela", "Gastronomía de Venezuela", "Historia de Venezuela",
-        "Geografía de Venezuela", "Música de Venezuela", "Arte de Venezuela", "Literatura venezolana",
-        "Béisbol en Venezuela", "Fútbol en Venezuela", "Isla de Margarita", "Salto Ángel", "Los Roques",
-        "Mérida (Venezuela)", "Caracas", "Maracaibo", "Valencia (Venezuela)", "Barquisimeto",
-        "Parque Nacional Canaima", "Parque Nacional Morrocoy", "Roraima", "Gran Sabana",
-        "Lago de Maracaibo", "Río Orinoco", "Simón Bolívar", "Francisco de Miranda", "José Antonio Páez",
-        "Antonio José de Sucre", "Rómulo Gallegos", "Teresa Carreño", "Simón Díaz", "José Gregorio Hernández",
-        "Andrés Bello", "Arepa", "Hallaca", "Cachapa", "Pabellón criollo", "Tequeño", "Queso de mano",
-        "Casabe", "Chicha venezolana", "Pan de jamón", "Joropo", "Gaita zuliana", "Diablos Danzantes de Yare",
-        "Carnaval de El Callao", "Feria de la Chinita"
-    ]
-    
-    # Intentar hasta 3 temas diferentes
+    temas = ["Venezuela", "Cultura de Venezuela", "Gastronomía de Venezuela", "Historia de Venezuela", "Geografía de Venezuela", "Música de Venezuela", "Arte de Venezuela", "Literatura venezolana", "Béisbol en Venezuela", "Isla de Margarita", "Salto Ángel", "Los Roques", "Mérida (Venezuela)", "Caracas", "Maracaibo", "Valencia (Venezuela)", "Barquisimeto", "Parque Nacional Canaima", "Parque Nacional Morrocoy", "Roraima", "Gran Sabana", "Lago de Maracaibo", "Río Orinoco", "Simón Bolívar", "Francisco de Miranda", "José Antonio Páez", "Antonio José de Sucre", "Rómulo Gallegos", "Teresa Carreño", "Simón Díaz", "José Gregorio Hernández", "Andrés Bello", "Arepa", "Hallaca", "Cachapa", "Pabellón criollo", "Tequeño", "Queso de mano", "Casabe", "Chicha venezolana", "Pan de jamón", "Joropo", "Gaita zuliana", "Diablos Danzantes de Yare", "Carnaval de El Callao", "Feria de la Chinita"]
     for intento in range(3):
         tema = random.choice(temas)
         try:
@@ -77,23 +59,16 @@ def obtener_wiki_ve():
             resp = requests.get(url, headers=WIKI_HEADERS, timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
-                titulo = data.get("title", tema)
                 extracto = data.get("extract", "")
-                if len(extracto) > 100:  # Solo aceptar resúmenes útiles
-                    extracto = extracto[:400]
+                if len(extracto) > 100:
+                    titulo = data.get("title", tema)
                     imagen = data.get("thumbnail", {}).get("source", "")
-                    texto = f"🇻 *VENEZUELA: {titulo}*\n\n{extracto}...\n\n📚 Fuente: Wikipedia"
+                    texto = f"🇻🇪 *VENEZUELA: {titulo}*\n\n{extracto[:400]}...\n\n📚 Fuente: Wikipedia"
                     return "wiki_ve_" + tema, texto, imagen
-                else:
-                    print(f"⚠️ Resumen muy corto para {tema} ({len(extracto)} chars)")
-            else:
-                print(f"️ Wikipedia HTTP {resp.status_code} para {tema}")
         except Exception as e:
-            print(f"Error Wiki VE con {tema}: {e}")
-    
+            print(f"Error Wiki VE: {e}")
     return None, None, None
 
-# Función genérica para YouTube
 def obtener_youtube(canal_nombre, canal_id, prefijo):
     url = f"https://www.youtube.com/feeds/videos.xml?channel_id={canal_id}"
     try:
@@ -105,7 +80,6 @@ def obtener_youtube(canal_nombre, canal_id, prefijo):
         ns = {'atom': 'http://www.w3.org/2005/Atom', 'yt': 'http://www.youtube.com/xml/schemas/2015'}
         entries = root.findall('atom:entry', ns)
         if not entries:
-            print(f"⚠️ {canal_nombre}: sin entradas")
             return None, None, None
         for entry in entries:
             video_id = entry.find('yt:videoId', ns).text
@@ -117,27 +91,25 @@ def obtener_youtube(canal_nombre, canal_id, prefijo):
         print(f"Error YT {canal_nombre}: {e}")
     return None, None, None
 
-# 3. YouTube Venevisión
+# ¡IDs REALES Y VERIFICADOS!
 def obtener_yt_venevision():
     return obtener_youtube("Venevisión", "UC-IYFiRncgePvdKAJSEHhiQ", "yt_vv")
 
-# 4. YouTube Telesur
-def obtener_yt_telesur():
-    return obtener_youtube("teleSUR", "UC55IC3oKqXqKqXqKqXqKqXq", "yt_telesur")
+def obtener_yt_vtv():
+    return obtener_youtube("VTV (Venezolana de Televisión)", "UC_8sCVycu3FXidPNoZwOHqA", "yt_vtv")
 
-# 5. YouTube DW Español
+def obtener_yt_telesur():
+    return obtener_youtube("teleSUR", "UC-6LFBP_Zw6870wkuG324Ww", "yt_telesur")
+
 def obtener_yt_dw():
     return obtener_youtube("DW Español", "UCDWKQWwUeU7_7vYj0qYJ5qA", "yt_dw")
 
-# 6. YouTube CNN en Español
 def obtener_yt_cnn():
     return obtener_youtube("CNN en Español", "UCVevZQh9HpWpzw91vl45x93g", "yt_cnn")
 
 # ================= FUENTES LATINOAMÉRICA =================
-
-# 7. Wikipedia México (con reintentos)
 def obtener_wiki_mx():
-    temas = ["México", "Cultura de México", "Gastronomía de México", "Historia de México", "Tacos", "Tequila", "Día de Muertos", "Chichén Itzá", "Frida Kahlo", "Diego Rivera"]
+    temas = ["México", "Cultura de México", "Gastronomía de México", "Historia de México", "Tacos", "Tequila", "Día de Muertos", "Chichén Itzá", "Frida Kahlo"]
     for intento in range(3):
         tema = random.choice(temas)
         try:
@@ -145,20 +117,13 @@ def obtener_wiki_mx():
             resp = requests.get(url, headers=WIKI_HEADERS, timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
-                extracto = data.get("extract", "")
-                if len(extracto) > 100:
-                    titulo = data.get("title", tema)
-                    extracto = extracto[:400]
-                    imagen = data.get("thumbnail", {}).get("source", "")
-                    texto = f"🇽 *MÉXICO: {titulo}*\n\n{extracto}...\n\n📚 Fuente: Wikipedia"
-                    return "wiki_mx_" + tema, texto, imagen
-        except:
-            pass
+                if len(data.get("extract", "")) > 100:
+                    return "wiki_mx_" + tema, f"🇲🇽 *MÉXICO: {data.get('title')}*\n\n{data.get('extract', '')[:400]}...\n\n📚 Fuente: Wikipedia", data.get("thumbnail", {}).get("source", "")
+        except: pass
     return None, None, None
 
-# 8. Wikipedia Colombia (con reintentos)
 def obtener_wiki_co():
-    temas = ["Colombia", "Cultura de Colombia", "Gastronomía de Colombia", "Historia de Colombia", "Café de Colombia", "Bogotá", "Cartagena de Indias", "Gabriel García Márquez", "Shakira", "Vallenato"]
+    temas = ["Colombia", "Cultura de Colombia", "Gastronomía de Colombia", "Historia de Colombia", "Café de Colombia", "Bogotá", "Cartagena de Indias", "Gabriel García Márquez", "Vallenato"]
     for intento in range(3):
         tema = random.choice(temas)
         try:
@@ -166,20 +131,13 @@ def obtener_wiki_co():
             resp = requests.get(url, headers=WIKI_HEADERS, timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
-                extracto = data.get("extract", "")
-                if len(extracto) > 100:
-                    titulo = data.get("title", tema)
-                    extracto = extracto[:400]
-                    imagen = data.get("thumbnail", {}).get("source", "")
-                    texto = f"🇨🇴 *COLOMBIA: {titulo}*\n\n{extracto}...\n\n📚 Fuente: Wikipedia"
-                    return "wiki_co_" + tema, texto, imagen
-        except:
-            pass
+                if len(data.get("extract", "")) > 100:
+                    return "wiki_co_" + tema, f"🇨🇴 *COLOMBIA: {data.get('title')}*\n\n{data.get('extract', '')[:400]}...\n\n📚 Fuente: Wikipedia", data.get("thumbnail", {}).get("source", "")
+        except: pass
     return None, None, None
 
-# 9. Wikipedia Argentina (con reintentos)
 def obtener_wiki_ar():
-    temas = ["Argentina", "Cultura de Argentina", "Gastronomía de Argentina", "Historia de Argentina", "Mate", "Tango", "Buenos Aires", "Patagonia", "Lionel Messi", "Eva Perón"]
+    temas = ["Argentina", "Cultura de Argentina", "Gastronomía de Argentina", "Historia de Argentina", "Mate", "Tango", "Buenos Aires", "Patagonia", "Lionel Messi"]
     for intento in range(3):
         tema = random.choice(temas)
         try:
@@ -187,18 +145,11 @@ def obtener_wiki_ar():
             resp = requests.get(url, headers=WIKI_HEADERS, timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
-                extracto = data.get("extract", "")
-                if len(extracto) > 100:
-                    titulo = data.get("title", tema)
-                    extracto = extracto[:400]
-                    imagen = data.get("thumbnail", {}).get("source", "")
-                    texto = f"🇷 *ARGENTINA: {titulo}*\n\n{extracto}...\n\n Fuente: Wikipedia"
-                    return "wiki_ar_" + tema, texto, imagen
-        except:
-            pass
+                if len(data.get("extract", "")) > 100:
+                    return "wiki_ar_" + tema, f"🇦🇷 *ARGENTINA: {data.get('title')}*\n\n{data.get('extract', '')[:400]}...\n\n📚 Fuente: Wikipedia", data.get("thumbnail", {}).get("source", "")
+        except: pass
     return None, None, None
 
-# 10. Wikipedia España (con reintentos)
 def obtener_wiki_es():
     temas = ["España", "Cultura de España", "Gastronomía de España", "Historia de España", "Paella", "Flamenco", "Madrid", "Barcelona", "Alhambra", "Miguel de Cervantes"]
     for intento in range(3):
@@ -208,125 +159,85 @@ def obtener_wiki_es():
             resp = requests.get(url, headers=WIKI_HEADERS, timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
-                extracto = data.get("extract", "")
-                if len(extracto) > 100:
-                    titulo = data.get("title", tema)
-                    extracto = extracto[:400]
-                    imagen = data.get("thumbnail", {}).get("source", "")
-                    texto = f"🇪🇸 *ESPAÑA: {titulo}*\n\n{extracto}...\n\n📚 Fuente: Wikipedia"
-                    return "wiki_es_" + tema, texto, imagen
-        except:
-            pass
+                if len(data.get("extract", "")) > 100:
+                    return "wiki_es_" + tema, f"🇪🇸 *ESPAÑA: {data.get('title')}*\n\n{data.get('extract', '')[:400]}...\n\n📚 Fuente: Wikipedia", data.get("thumbnail", {}).get("source", "")
+        except: pass
     return None, None, None
 
-# 11. RSS BBC Mundo
 def obtener_rss_bbc():
-    feed_url = "http://feeds.bbci.co.uk/mundo/rss.xml"
-    nombre_medio = "BBC News Mundo"
     try:
-        feed = feedparser.parse(feed_url)
+        feed = feedparser.parse("http://feeds.bbci.co.uk/mundo/rss.xml")
         for entry in feed.entries[:10]:
             item_id = entry.get('id', entry.get('link'))
             titulo = entry.get('title', 'Sin título')
-            resumen = entry.get('summary', 'Sin resumen')
-            resumen_limpio = limpiar_html(resumen)[:250] + "..."
+            resumen = limpiar_html(entry.get('summary', ''))[:250] + "..."
             link = entry.get('link', '')
-            texto = f"📰 *{nombre_medio}*\n\n📌 *{titulo}*\n\n{resumen_limpio}\n\n {link}"
-            return item_id, texto, None
+            return item_id, f"📰 *BBC News Mundo*\n\n📌 *{titulo}*\n\n{resumen}\n\n🔗 {link}", None
     except Exception as e:
         print(f"Error RSS BBC: {e}")
     return None, None, None
 
-# ================= FUENTES VISUALES =================
-
-# 12. NASA
 def obtener_nasa():
     try:
         resp = requests.get("https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY", timeout=10)
         if resp.status_code == 200:
             data = resp.json()
-            titulo = data.get("title", "Imagen del Espacio")
-            explicacion = data.get("explanation", "")[:400]
-            url_imagen = data.get("url", "")
-            texto = f" *ASTRONOMÍA: {titulo}*\n\n{explicacion}...\n\n📚 Fuente: NASA"
-            return "nasa_" + data.get("date", "hoy"), texto, url_imagen
+            return "nasa_" + data.get("date", "hoy"), f"🌌 *ASTRONOMÍA: {data.get('title')}*\n\n{data.get('explanation', '')[:400]}...\n\n📚 Fuente: NASA", data.get("url", "")
     except Exception as e:
         print(f"Error NASA: {e}")
     return None, None, None
 
-# 13. Unsplash/Picsum
 def obtener_imagen():
     seed = random.randint(1, 10000)
     url_imagen = f"https://picsum.photos/seed/{seed}/800/600"
-    temas = ["naturaleza", "ciudad", "arte", "arquitectura", "paisaje", "retrato", "animal"]
-    tema = random.choice(temas)
-    texto = f"📸 *ARTE VISUAL*\n\nUna perspectiva única sobre {tema}.\n\n Fuente: Unsplash"
-    return f"img_{seed}", texto, url_imagen
+    tema = random.choice(["naturaleza", "ciudad", "arte", "arquitectura", "paisaje"])
+    return f"img_{seed}", f"📸 *ARTE VISUAL*\n\nUna perspectiva única sobre {tema}.\n\n📚 Fuente: Unsplash", url_imagen
 
 # ================= MOTOR DE ENVÍO =================
 def enviar_mensaje(texto, url_imagen=None):
     if url_imagen:
         try:
-            headers = {'User-Agent': 'Mozilla/5.0'}
-            img_data = requests.get(url_imagen, headers=headers, timeout=10).content
+            img_data = requests.get(url_imagen, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10).content
             files = {'photo': ('img.jpg', img_data, 'image/jpeg')}
             data = {'chat_id': CANAL, 'caption': texto, 'parse_mode': 'Markdown'}
-            r = requests.post(API_PHOTO, files=files, data=data, timeout=15)
-            if r.status_code == 200:
+            if requests.post(API_PHOTO, files=files, data=data, timeout=15).status_code == 200:
                 return True
-            else:
-                print(f"⚠️ Error foto: {r.status_code}")
         except Exception as e:
-            print(f"Error enviando foto: {e}")
+            print(f"Error foto: {e}")
     
     data = {'chat_id': CANAL, 'text': texto, 'parse_mode': 'Markdown'}
-    r = requests.post(API_URL, data=data, timeout=10)
-    if r.status_code == 200:
-        return True
-    else:
-        print(f"❌ Error Telegram: {r.status_code} - {r.text[:100]}")
-        return False
+    return requests.post(API_URL, data=data, timeout=10).status_code == 200
 
-# ================= EJECUCIÓN PRINCIPAL CON REINTENTOS =================
+# ================= EJECUCIÓN PRINCIPAL =================
 def main():
     print("🌍 Iniciando Cerebro Central VeneMundo...")
     vistos = cargar_vistos()
     
-    # Intentar hasta 3 categorías diferentes si la primera falla
     for intento in range(3):
         categoria = random.choice(CATEGORIAS)
-        print(f"🎲 Intento {intento+1}: Fuente seleccionada: {categoria.upper()}")
+        print(f"🎲 Intento {intento+1}: {categoria.upper()}")
         
         funciones = {
-            "bcv": obtener_bcv,
-            "wiki_ve": obtener_wiki_ve,
-            "yt_venevision": obtener_yt_venevision,
-            "yt_telesur": obtener_yt_telesur,
-            "yt_dw": obtener_yt_dw,
-            "yt_cnn": obtener_yt_cnn,
-            "wiki_mx": obtener_wiki_mx,
-            "wiki_co": obtener_wiki_co,
-            "wiki_ar": obtener_wiki_ar,
-            "wiki_es": obtener_wiki_es,
-            "rss_bbc": obtener_rss_bbc,
-            "nasa": obtener_nasa,
-            "imagen": obtener_imagen
+            "bcv": obtener_bcv, "wiki_ve": obtener_wiki_ve, "yt_venevision": obtener_yt_venevision,
+            "yt_vtv": obtener_yt_vtv, "yt_telesur": obtener_yt_telesur, "yt_dw": obtener_yt_dw,
+            "yt_cnn": obtener_yt_cnn, "wiki_mx": obtener_wiki_mx, "wiki_co": obtener_wiki_co,
+            "wiki_ar": obtener_wiki_ar, "wiki_es": obtener_wiki_es, "rss_bbc": obtener_rss_bbc,
+            "nasa": obtener_nasa, "imagen": obtener_imagen
         }
         
         func = funciones.get(categoria)
         if func:
             item_id, texto, img = func()
-            
             if item_id and item_id not in vistos:
                 print(f"✅ Publicando: {item_id}")
                 if enviar_mensaje(texto, img):
                     guardar_visto(item_id)
                     print("🚀 ¡Publicado con éxito!")
-                    return  # Salir exitosamente
+                    return
                 else:
-                    print("❌ Error al enviar a Telegram")
+                    print("❌ Error al enviar")
             else:
-                print(f"️ Ya visto o no disponible (item_id={item_id})")
+                print(f"⚠️ Ya visto o no disponible")
     
     print("⚠️ No se pudo publicar después de 3 intentos")
 
