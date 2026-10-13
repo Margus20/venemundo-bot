@@ -10,3 +10,4 @@ img_5545
 wiki_ve_Simón Bolívar
 img_4227
 wiki_co_Gabriel García Márquez
+wiki_ve_Hallaca
