@@ -39,3 +39,4 @@ wiki_ar_Argentina
 wiki_es_Madrid
 https://www.bbc.com/mundo/articles/cm4g17q284xlo#0
 wiki_ar_Historia de Argentina
+wiki_mx_Tequila
