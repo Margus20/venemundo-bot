@@ -57,3 +57,4 @@ wiki_co_Colombia
 wiki_co_Bogotá
 https://www.bbc.com/mundo/articles/ckm230z1vngqo#0
 wiki_mx_Cultura de México
+bcv_2026-10-23T00:00:00-04:00
