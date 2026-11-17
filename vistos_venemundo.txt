@@ -123,3 +123,4 @@ wiki_ve_Barquisimeto
 bcv_2026-11-16T00:00:00-04:00
 wiki_ar_Patagonia
 yt_vtv_FedyCZdMkeY
+wiki_ve_Venezuela
